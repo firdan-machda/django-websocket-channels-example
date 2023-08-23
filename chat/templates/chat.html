@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Real-Time Chat</title>
+</head>
+<body>
+    <h1>Real-Time Chat</h1>
+    <div id="chat-log"></div>
+    <input id="chat-message-input" type="text">
+    <button id="chat-message-submit" type="button">Send</button>
+</body>
+<script>
+    const chatSocket = new WebSocket(
+        'ws://' + window.location.host +
+        '/ws/chat/'
+    );
+
+    chatSocket.onmessage = function(e) {
+        const message = JSON.parse(e.data);
+        document.querySelector('#chat-log').innerHTML += '<br>' + message;
+    };
+
+    document.querySelector('#chat-message-submit').onclick = function(e) {
+        const messageInputDom = document.querySelector('#chat-message-input');
+        const message = messageInputDom.value;
+        chatSocket.send(JSON.stringify(message));
+        messageInputDom.value = '';
+    };
+</script>
+</html>
