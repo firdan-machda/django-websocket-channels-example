@@ -24,7 +24,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_send(
             self.room_group_name,
             {"type": "chat_message",
-             "message": "available command is random and ping",
+             "message": "available command is random, lorem and ping",
              "owner": "server"},
         )
 
