@@ -3,7 +3,7 @@
 <head>
     <title>Real-Time Chat</title>
 </head>
-<body>
+<body>  
     <h1>Real-Time Chat</h1>
     <div id="chat-log"></div>
     <input id="chat-message-input" type="text">
@@ -23,7 +23,8 @@
     document.querySelector('#chat-message-submit').onclick = function(e) {
         const messageInputDom = document.querySelector('#chat-message-input');
         const message = messageInputDom.value;
-        chatSocket.send(JSON.stringify(message));
+        console.log(message)
+        chatSocket.send(JSON.stringify({message, "owner":"server"}));
         messageInputDom.value = '';
     };
 </script>

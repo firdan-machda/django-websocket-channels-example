@@ -1,6 +1,7 @@
 import channels_graphql_ws
 import graphene
 
+
 class MySubscription(channels_graphql_ws.Subscription):
     """Simple GraphQL subscription."""
 
@@ -12,6 +13,7 @@ class MySubscription(channels_graphql_ws.Subscription):
 
     class Arguments:
         """That is how subscription arguments are defined."""
+
         arg1 = graphene.String()
         arg2 = graphene.String()
 
@@ -33,7 +35,9 @@ class MySubscription(channels_graphql_ws.Subscription):
         # this particular client.
 
         return MySubscription(event="Something has happened!")
-    
+
+
 class Subscription(graphene.ObjectType):
     """Root GraphQL subscription."""
+
     my_subscription = MySubscription.Field()
