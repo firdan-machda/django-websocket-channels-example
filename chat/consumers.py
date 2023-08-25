@@ -31,6 +31,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def receive(self, text_data):
         message = ""
         owner = ""
+        answer = ""
         text_data_json = None
 
         if text_data:
@@ -38,48 +39,59 @@ class ChatConsumer(AsyncWebsocketConsumer):
             text_data_json = json.loads(text_data)
             message = text_data_json["message"]
             owner = text_data_json["owner"]
-            # Send message to room group
+            answer = text_data_json.get("answer")
 
         await self.system_message({"type": "system_message", "signal": "loading"})
 
-        if message:
+        # Send message to room group
+        if message and not answer:
             await self.chat_message(
                 {"type": "chat_message", "message": message, "owner": owner})
-        valid = False
+        elif answer:
+            await self.chat_message(
+                {"type": "chat_message", "message": answer, "owner": owner})
+
+        await asyncio.sleep(3)
+        # TODO: restructure this
         if message == "random":
-            valid = True
             response = "Here's a random number ranging between 0-99: {}\n".format(
                 random.randint(0, 99)
             )
             await self.chat_message(
                 {"type": "chat_message", "message": response, "owner": "server"}
             )
-
-        if message == "ping":
-            valid = True
+        elif message == "ping":
             await self.chat_message(
                 {"type": "chat_message", "message": "pong", "owner": "server"}
             )
-
-        if message == "lorem":
-            valid = True
+        elif message == "lorem":
             fake = Faker()
             fake.add_provider(lorem)
-
-            await asyncio.sleep(3)
             await self.chat_message(
                 {"type": "chat_message",
-                 "message": fake.paragraph(),
+                 "message": fake.paragraph(nb_sentences=10),
                  "owner": "server"}
             )
-        await self.system_message(
-            {"type": "system_message", "signal": "finished-loading"})
-        if not valid:
+        elif message == "coinflip":
+            if answer:
+                result = "heads" if bool(random.getrandbits(1)) else "tails"
+
+                await self.chat_message({"message": "Flipped {}".format(result), "owner": "server"})
+                if result == answer:
+                    await self.chat_message({"message": "Your guess is correct!", "owner": "server"})
+                else:
+                    await self.chat_message({"message": "Your guess is incorrect!", "owner": "server"})
+            else:
+                await self.chat_message({"message": "Guess coinflip: heads or tails?", "owner": "server"})
+                await self.prompt_action({"choices": [{"name": "Heads", "alias": "heads"}, {"name": "Tails", "alias": "tails"}]})
+        else:
             # invalid command
             response = "Sorry, I don't recognise the command. Available command is random, lorem and ping"
             await self.chat_message(
                 {"type": "chat_message", "message": response, "owner": "server"}
             )
+        await self.system_message(
+            {"type": "system_message", "signal": "finished-loading"})
 
     # Receive message from room group
 
@@ -93,3 +105,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def system_message(self, event):
         message = event["signal"]
         await self.send(text_data=json.dumps({"type": "system", "message": message}))
+
+    async def prompt_action(self, event):
+        choices = event["choices"]
+        await self.send(text_data=json.dumps({"type": "action", "choices": choices, "owner": "server"}))
