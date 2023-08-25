@@ -3,6 +3,7 @@ import json
 import random
 from faker import Faker
 from faker.providers import lorem
+import asyncio
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -15,18 +16,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
 
         await self.accept()
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {"type": "chat_message",
-             "message": "welcome to channels demo",
-             "owner": "server"},
-        )
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {"type": "chat_message",
-             "message": "available command is random, lorem and ping",
-             "owner": "server"},
-        )
+        await self.chat_message({"type": "chat_message",
+                                 "message": "welcome to channels demo",
+                                 "owner": "server"})
+        await self.chat_message({"type": "chat_message",
+                                 "message": "available command is random, lorem and ping",
+                                 "owner": "server"})
 
     async def disconnect(self, close_code):
         # Leave room group
@@ -44,29 +39,25 @@ class ChatConsumer(AsyncWebsocketConsumer):
             message = text_data_json["message"]
             owner = text_data_json["owner"]
             # Send message to room group
-        await self.channel_layer.group_send(self.room_group_name,
-                                            {"type": "system_message", "signal": "loading"})
+
+        await self.system_message({"type": "system_message", "signal": "loading"})
 
         if message:
-            await self.channel_layer.group_send(
-                self.room_group_name,
-                {"type": "chat_message", "message": message, "owner": owner},
-            )
+            await self.chat_message(
+                {"type": "chat_message", "message": message, "owner": owner})
         valid = False
         if message == "random":
             valid = True
             response = "Here's a random number ranging between 0-99: {}\n".format(
                 random.randint(0, 99)
             )
-            await self.channel_layer.group_send(
-                self.room_group_name,
+            await self.chat_message(
                 {"type": "chat_message", "message": response, "owner": "server"}
             )
 
         if message == "ping":
             valid = True
-            await self.channel_layer.group_send(
-                self.room_group_name,
+            await self.chat_message(
                 {"type": "chat_message", "message": "pong", "owner": "server"}
             )
 
@@ -75,19 +66,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
             fake = Faker()
             fake.add_provider(lorem)
 
-            await self.channel_layer.group_send(
-                self.room_group_name,
+            await asyncio.sleep(3)
+            await self.chat_message(
                 {"type": "chat_message",
                  "message": fake.paragraph(),
                  "owner": "server"}
             )
-        await self.channel_layer.group_send(self.room_group_name,
-                                            {"type": "system_message", "signal": "finished-loading"})
+        await self.system_message(
+            {"type": "system_message", "signal": "finished-loading"})
         if not valid:
             # invalid command
             response = "Sorry, I don't recognise the command. Available command is random, lorem and ping"
-            await self.channel_layer.group_send(
-                self.room_group_name,
+            await self.chat_message(
                 {"type": "chat_message", "message": response, "owner": "server"}
             )
 
