@@ -20,7 +20,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                                  "message": "welcome to channels demo",
                                  "owner": "server"})
         await self.chat_message({"type": "chat_message",
-                                 "message": "available command is random, lorem and ping",
+                                 "message": "available command is coinflip, lorem, ping and random",
                                  "owner": "server"})
 
     async def disconnect(self, close_code):
