@@ -6,18 +6,25 @@
 </head>
 <body>
     <h1>Live Chat Room</h1>
+    <p>Your temporary username: <span id="username"></span></p>
     <textarea id="chat-log" cols="100" rows="20"></textarea><br>
     <input id="chat-message-input" type="text" size="100"><br>
     <input id="chat-message-submit" type="button" value="Send">
     {{ room_name|json_script:"room-name" }}
     <script>
         let storedText = '';
+        let last_message = '';
+        let chatMessages = [];
         
         async function get_usernames(){
             let response = await fetch('/static/txt/marvel.txt')
             let text = await response.text()
             storedText = text.split('\n')
             return storedText
+        }
+
+        function updateChat(){
+            document.querySelector('#chat-log').value = chatMessages.join('\n')
         }
 
         function prepare_chatroom(username){
@@ -31,12 +38,41 @@
                 + roomName
                 + '/'
             );
+            
+            chatSocket.onopen = function(e){
+                console.log('connected')
+            }
 
             // display incoming messages
             chatSocket.onmessage = function(e) {
                 console.log(e.data)
                 const data = JSON.parse(e.data);
-                document.querySelector('#chat-log').value += (data.owner+": "+data.message + '\n');
+                console.log('a:',last_message,'b:',data.message)
+                // don't repeat if message is the same
+                if (data.message == last_message){
+                    return
+                }
+                if (chatMessages[chatMessages.length - 1]?.includes("typing...")){
+                    chatMessages.pop()
+                }
+                // display message
+                if(data.owner === 'server'){
+                    message = data.message.split(';')
+                    console.log(message)
+                    if (message.length>1){
+                        if(message[0] == 'user_typing'){
+                            let currentMessage = message[1]+" is typing... "
+                            chatMessages.push(currentMessage)
+                        }
+                    }else {
+                        chatMessages.push(data.message)
+                    }
+                }
+                else {
+                    chatMessages.push(data.owner + ': ' + data.message)
+                }
+                updateChat()
+                last_message = data.message
             };
 
             // display when closed
@@ -52,6 +88,16 @@
                     document.querySelector('#chat-message-submit').click();
                 }
             };
+            // send message typing... when user type
+            document.querySelector('#chat-message-input').onkeypress = function(e) {
+                
+                chatSocket.send(JSON.stringify({
+                    'type':'status',
+                    'message': 'user_typing',
+                    'owner':username
+                }));
+            };
+            
 
             document.querySelector('#chat-message-submit').onclick = function(e) {
                 const messageInputDom = document.querySelector('#chat-message-input');
@@ -68,7 +114,9 @@
             // fetch sample text
             await get_usernames()
             randomIndex = Math.floor(Math.random() * storedText.length)
+            // set username and prepare chatroom
             let username = storedText[randomIndex]
+            document.getElementById('username').innerText = username
             prepare_chatroom(username)
         }
 

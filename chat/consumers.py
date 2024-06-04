@@ -17,9 +17,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         await self.accept()
         await self.chat_message({"type": "chat_message",
-                                 "message": "welcome to channels demo",
-                                 "owner": "server"})
-        await self.chat_message({"type": "chat_message",
                                  "message": "available command is coinflip, lorem, ping and random",
                                  "owner": "server"})
 
@@ -122,29 +119,38 @@ class LiveChatConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
 
         await self.accept()
-        await self.chat_message({"type": "chat_message",
-                                 "message": "welcome to live chat",
-                                 "owner": "server"})
+
+        await self.channel_layer.group_send(
+            self.room_group_name, {
+                "type": "system.message", "signal": f"{self.scope['user']} has joined the chat"}
+        )
 
     async def disconnect(self, close_code):
         # Leave room group
         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
 
     # Receive message from WebSocket
-    async def receive(self, text_data):      
+    async def receive(self, text_data):
         text_data_json = json.loads(text_data)
 
-        await self.system_message({"type": "system_message", "signal": "loading"})
-
+        # await self.system_message({"type": "system_message", "signal": "loading"})
         # simulate delay
         # await asyncio.sleep(random.randint(0, 3))
-        
-        # Send message to room group
-        # in the future need to check if the message is safe
+
         print(text_data_json)
-        await self.channel_layer.group_send(
-            self.room_group_name, {"type": "live_message", "message": text_data_json['message'], "owner": text_data_json['owner']}
-        )
+        if 'type' in text_data_json and text_data_json['type'] == 'status':
+            await self.channel_layer.group_send(
+                self.room_group_name, {
+                    "type": "system.message", "signal": f"{text_data_json['message']};{text_data_json['owner']}"}
+            )
+        else:
+            # Send message to room group
+            # in the future need to check if the message is safe
+            # type chat.message will be handled by chat_message method
+            await self.channel_layer.group_send(
+                self.room_group_name, {
+                    "type": "chat.message", "message": text_data_json['message'], "owner": text_data_json['owner']}
+            )
 
     # Receive message from room group
 
@@ -156,4 +162,4 @@ class LiveChatConsumer(AsyncWebsocketConsumer):
 
     async def system_message(self, event):
         message = event["signal"]
-        await self.send(text_data=json.dumps({"type": "system", "message": message}))
+        await self.send(text_data=json.dumps({"type": "system", "message": message, "owner": "server"}))
