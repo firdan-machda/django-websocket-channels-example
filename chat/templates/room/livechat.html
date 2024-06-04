@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>Live Chat Room</title>
+</head>
+<body>
+    <h1>Live Chat Room</h1>
+    <textarea id="chat-log" cols="100" rows="20"></textarea><br>
+    <input id="chat-message-input" type="text" size="100"><br>
+    <input id="chat-message-submit" type="button" value="Send">
+    {{ room_name|json_script:"room-name" }}
+    <script>
+        let storedText = '';
+        
+        async function get_usernames(){
+            let response = await fetch('/static/txt/marvel.txt')
+            let text = await response.text()
+            storedText = text.split('\n')
+            return storedText
+        }
+
+        function prepare_chatroom(username){
+            console.log(username)
+            const roomName = JSON.parse(document.getElementById('room-name').textContent);
+
+            const chatSocket = new WebSocket(
+                'ws://'
+                + window.location.host
+                + '/ws/livechat/'
+                + roomName
+                + '/'
+            );
+
+            // display incoming messages
+            chatSocket.onmessage = function(e) {
+                console.log(e.data)
+                const data = JSON.parse(e.data);
+                document.querySelector('#chat-log').value += (data.owner+": "+data.message + '\n');
+            };
+
+            // display when closed
+            chatSocket.onclose = function(e) {
+                alert("Chat disconnected")
+                console.error('Chat socket closed unexpectedly');
+            };
+
+            // submit message
+            document.querySelector('#chat-message-input').focus();
+            document.querySelector('#chat-message-input').onkeyup = function(e) {
+                if (e.keyCode === 13) {  // enter, return
+                    document.querySelector('#chat-message-submit').click();
+                }
+            };
+
+            document.querySelector('#chat-message-submit').onclick = function(e) {
+                const messageInputDom = document.querySelector('#chat-message-input');
+                const message = messageInputDom.value;
+                chatSocket.send(JSON.stringify({
+                    'message': message,
+                    'owner':username
+                }));
+                messageInputDom.value = '';
+            };
+        }
+
+        async function run(){
+            // fetch sample text
+            await get_usernames()
+            randomIndex = Math.floor(Math.random() * storedText.length)
+            let username = storedText[randomIndex]
+            prepare_chatroom(username)
+        }
+
+        run()
+       
+    </script>
+</body>
+</html>

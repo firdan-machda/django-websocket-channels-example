@@ -15,6 +15,8 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
+from django.conf import settings
+from django.conf.urls.static import static
 from django.urls import path, include
 from graphene_django.views import GraphQLView
 
@@ -23,3 +25,6 @@ urlpatterns = [
     path('graphql', GraphQLView.as_view(graphiql=True)),
     path('chat/', include('chat.urls')),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
