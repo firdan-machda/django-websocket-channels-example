@@ -18,12 +18,15 @@ from django.contrib import admin
 from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import path, include
+from django.views.generic import RedirectView
 from graphene_django.views import GraphQLView
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('graphql', GraphQLView.as_view(graphiql=True)),
     path('chat/', include('chat.urls')),
+    path('', RedirectView.as_view(url='/chat/')),
 ]
 
 if settings.DEBUG:
