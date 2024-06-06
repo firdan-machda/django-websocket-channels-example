@@ -17,6 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.generic.base import TemplateView
 from django.urls import path, include
 from django.views.generic import RedirectView
 from graphene_django.views import GraphQLView
@@ -26,8 +27,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('graphql/', csrf_exempt(GraphQLView.as_view(graphiql=True))),
     path('chat/', include('chat.urls')),
-    path('', RedirectView.as_view(url='/chat/')),
-    path('webpush/', include('webpush.urls'))
+    path('webpush/', include('webpush.urls')),
+    path('', TemplateView.as_view(template_name='index.html')),
 ]
 
 if settings.DEBUG:
