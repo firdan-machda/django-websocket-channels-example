@@ -1,6 +1,9 @@
 import graphene
 from django.conf import settings
-class Query(graphene.ObjectType):
+from .chatroom.query import Query as ChatroomQuery
+
+
+class Query(ChatroomQuery, graphene.ObjectType):
     """Root GraphQL query."""
     # Graphene requires at least one field to be present. Check
     # Graphene docs to see how to define queries.
