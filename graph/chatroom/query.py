@@ -10,6 +10,5 @@ class Query(graphene.ObjectType):
     def resolve_chatrooms(self, info):
         user = info.context.user
         if user.is_authenticated:
-            return (list(ChatUser.objects.filter(user=user).annotate(
-                chat_session__str=Cast("chat_session__session_uuid", output_field=TextField())).values_list("chat_session__str", flat=True)))
+            return (list(ChatUser.objects.filter(user=user).values_list("chat_session__session_uuid", flat=True)))
         return []

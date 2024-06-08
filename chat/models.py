@@ -21,3 +21,4 @@ class ChatMessage(models.Model):
     chat_session = models.ForeignKey(ChatSession, on_delete=models.CASCADE)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
     message = models.TextField(max_length=200)
+    created_at = models.DateTimeField(auto_now_add=True)

@@ -21,8 +21,7 @@ class JoinChatroomMutation(graphene.Mutation):
         try:
             chatsession = ChatSession.objects.get(session_uuid=chatroom_id)
             ChatUser.objects.get_or_create(chat_session=chatsession, user=user)
-            
-            return JoinChatroomMutation(chatroom_id=chatsession.session_uuid)
+            return JoinChatroomMutation(chatroom_id=str(chatsession.session_uuid))
         # register for notification?
         except ChatSession.DoesNotExist:
             raise GraphQLError("chat session does not exist")

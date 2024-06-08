@@ -4,7 +4,10 @@ import random
 from faker import Faker
 from faker.providers import lorem
 import asyncio
+from webpush import send_user_notification
+from chat.models import ChatSession, ChatMessage, ChatUser
 
+from asgiref.sync import sync_to_async
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -109,3 +112,64 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def prompt_action(self, event):
         choices = event["choices"]
         await self.send(text_data=json.dumps({"type": "action", "choices": choices, "owner": "server"}))
+
+
+class LiveChatConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        # check chatsession exist
+        self.room_name = self.scope["url_route"]["kwargs"]["room_name"]
+        self.room_group_name = "livechat_%s" % self.room_name
+        try:
+            self.chat_session = await ChatSession.objects.aget(session_uuid=self.room_name)
+            await ChatUser.objects.aget(user=self.scope["user"], chat_session=self.chat_session)
+        except (ChatUser.DoesNotExist, ChatSession.DoesNotExist):
+            await self.close()
+            return
+
+        # Join room group
+        await self.channel_layer.group_add(self.room_group_name, self.channel_name)
+        await self.accept()
+        async for message in ChatMessage.objects.filter(chat_session__session_uuid=self.room_name).order_by("created_at").values("user__username", "message"):
+            username = message["user__username"]
+            msg = message["message"]
+            owner = "Unknown" if username is None else username
+            await self.send(text_data=json.dumps({"type": "message", "message": msg, "owner": owner}))
+
+    async def disconnect(self, close_code):
+        # Leave room group
+        await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
+
+    async def receive(self, text_data):
+        message = ""
+        owner = self.scope["user"]
+        if not owner.is_authenticated:
+            return
+        text_data_json = None
+        if text_data:
+            text_data_json = json.loads(text_data)
+            message = text_data_json["message"]
+            await ChatMessage.objects.acreate(chat_session=self.chat_session,user=owner,message=message)
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    "type": "chat.message",
+                    "text": json.dumps({
+                        "type": "message",
+                        "message": message,
+                        "owner": owner.username
+                    }
+                    )
+                }
+            )
+            async for chat_user in ChatUser.objects.filter(chat_session=self.chat_session).exclude(user=owner):
+                usr = await sync_to_async(getattr)(chat_user, "user")
+                payload = {
+                    'head': "New message {}".format(str(self.chat_session.session_uuid)),
+                    'body': "{}: {}".format(owner.username, message)
+                }
+                if usr != owner:
+                    await sync_to_async(send_user_notification)(user=usr, payload=payload)
+                
+
+    async def chat_message(self, event):
+        await self.send(text_data=event["text"])
