@@ -3,8 +3,9 @@ import json
 import graphql_jwt
 from graphql.error import GraphQLError
 from django.contrib.auth import get_user_model, authenticate, login
-from webpush import send_user_notification
+from webpush import send_user_notification, send_notification_to_group, send_group_notification
 from webpush.forms import WebPushForm, SubscriptionForm
+from .chatroom.mutation import Mutation as ChatroomMutation
 
 
 class SendNotificationMutation(graphene.Mutation):
@@ -73,7 +74,7 @@ class SubscribeMutation(graphene.Mutation):
         return SubscribeMutation(status=400)
 
 
-class Mutation(graphene.ObjectType):
+class Mutation(ChatroomMutation, graphene.ObjectType):
     send_notification = SendNotificationMutation.Field()
     subscribe_push = SubscribeMutation.Field()
     token_auth = graphql_jwt.ObtainJSONWebToken.Field()
