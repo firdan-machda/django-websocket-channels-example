@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% load random_words %}
+
+{% block content %}
+<h1 class="text-3xl sm:text-4xl lg:text-5xl">Experiment Room</h1>
+<p>list of experiments:</p>
+{% random_words 5 as random_string%}
+<ul class="list-disc">
+    <li><a href="{% url 'chat:live' random_string %}">Live Chat Room</a></li>
+    <li><a href="{% url 'chat:room' random_string %}">Chat Room</a></li>
+</ul>
+{% endblock content %}

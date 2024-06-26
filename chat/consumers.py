@@ -54,7 +54,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.chat_message(
                 {"type": "chat_message", "message": answer, "owner": owner})
 
-        await asyncio.sleep(3)
+        # simulate delay
+        await asyncio.sleep(random.randint(0, 3))
+
         # TODO: restructure this
         if message == "random":
             response = "Here's a random number ranging between 0-99: {}\n".format(
@@ -139,6 +141,7 @@ class LiveChatConsumer(AsyncWebsocketConsumer):
         # Leave room group
         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
 
+    # Receive message from WebSocket
     async def receive(self, text_data):
         message = ""
         owner = self.scope["user"]

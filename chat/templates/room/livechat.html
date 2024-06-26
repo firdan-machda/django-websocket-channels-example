@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+
+{% block header %}
+<title>Live Chat Room</title>
+{% endblock header %}
+
+
+{% block content %}
+<h1 class="text-3xl sm:text-4xl lg:text-5xl">Live Chat Room</h1>
+<h3 class="">
+    Your temporary username: <span id="username"></span>
+</h3>
+<textarea id="chat-log" cols="100" rows="20" class="w-full sm:w-3/4 lg:w-1/2 h-64 p-2 rounded border"></textarea><br>
+<div class="flex gap-1">
+    <input id="chat-message-input" type="text" size="100"  class="w-full sm:w-3/4 lg:w-1/2 p-2 rounded border mt-2"><br>
+    <button id="chat-message-submit" type="submit" class="bg-violet-500 hover:bg-violet-700 text-white font-bold py-2 px-4 rounded mt-2">Send</button>
+</div>
+{{ room_name|json_script:"room-name" }}
+<script>
+    let storedText = '';
+    let last_message = '';
+    let chatMessages = [];
+    
+    async function get_usernames(){
+        let response = await fetch('/static/txt/marvel.txt')
+        let text = await response.text()
+        storedText = text.split('\n')
+        return storedText
+    }
+
+    function updateChat(){
+        document.querySelector('#chat-log').value = chatMessages.join('\n')
+    }
+
+    function prepare_chatroom(username){
+        console.log(username)
+        const roomName = JSON.parse(document.getElementById('room-name').textContent);
+
+        const chatSocket = new WebSocket(
+            'ws://'
+            + window.location.host
+            + '/ws/livechat/'
+            + roomName
+            + '/'
+        );
+        
+        chatSocket.onopen = function(e){
+            console.log('connected')
+        }
+
+        // display incoming messages
+        chatSocket.onmessage = function(e) {
+            console.log(e.data)
+            const data = JSON.parse(e.data);
+            console.log('a:',last_message,'b:',data.message)
+            // don't repeat if message is the same
+            if (data.message == last_message){
+                return
+            }
+            if (chatMessages[chatMessages.length - 1]?.includes("typing...")){
+                chatMessages.pop()
+            }
+            // display message
+            if(data.owner === 'server'){
+                message = data.message.split(';')
+                console.log(message)
+                if (message.length>1){
+                    if(message[0] == 'user_typing'){
+                        let currentMessage = message[1]+" is typing... "
+                        chatMessages.push(currentMessage)
+                    }
+                }else {
+                    chatMessages.push(data.message)
+                }
+            }
+            else {
+                chatMessages.push(data.owner + ': ' + data.message)
+            }
+            updateChat()
+            last_message = data.message
+        };
+
+        // display when closed
+        chatSocket.onclose = function(e) {
+            alert("Chat disconnected")
+            console.error('Chat socket closed unexpectedly');
+        };
+
+        // submit message
+        document.querySelector('#chat-message-input').focus();
+        document.querySelector('#chat-message-input').onkeyup = function(e) {
+            if (e.keyCode === 13) {  // enter, return
+                document.querySelector('#chat-message-submit').click();
+            }
+        };
+        // send message typing... when user type
+        document.querySelector('#chat-message-input').onkeypress = function(e) {
+            
+            chatSocket.send(JSON.stringify({
+                'type':'status',
+                'message': 'user_typing',
+                'owner':username
+            }));
+        };
+        
+
+        document.querySelector('#chat-message-submit').onclick = function(e) {
+            const messageInputDom = document.querySelector('#chat-message-input');
+            const message = messageInputDom.value;
+            chatSocket.send(JSON.stringify({
+                'message': message,
+                'owner':username
+            }));
+            messageInputDom.value = '';
+        };
+    }
+
+    async function run(){
+        // fetch sample text
+        await get_usernames()
+        randomIndex = Math.floor(Math.random() * storedText.length)
+        // set username and prepare chatroom
+        let username = storedText[randomIndex]
+        document.getElementById('username').innerText = username
+        prepare_chatroom(username)
+    }
+
+    run()
+   
+</script>
+{% endblock content %}
+
