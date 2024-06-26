@@ -1,17 +1,20 @@
-from channels.generic.websocket import AsyncWebsocketConsumer
 import json
 import random
+import asyncio
+
+from channels.generic.websocket import AsyncWebsocketConsumer
 from faker import Faker
 from faker.providers import lorem
-import asyncio
 from webpush import send_user_notification
 from chat.models import ChatSession, ChatMessage, ChatUser
 
 from asgiref.sync import sync_to_async
+from rich import print as rprint
+
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        print(self.scope["user"])
+        rprint(self.scope["user"])
         self.room_name = self.scope["url_route"]["kwargs"]["room_name"]
         self.room_group_name = "chat_%s" % self.room_name
 
@@ -38,7 +41,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         text_data_json = None
 
         if text_data:
-            print(text_data)
+            rprint(text_data)
             text_data_json = json.loads(text_data)
             message = text_data_json["message"]
             owner = text_data_json["owner"]
@@ -118,13 +121,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
 class LiveChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+        rprint("test...")
         # check chatsession exist
         self.room_name = self.scope["url_route"]["kwargs"]["room_name"]
         self.room_group_name = "livechat_%s" % self.room_name
         try:
+            rprint("Awaiting chat session and user...")
             self.chat_session = await ChatSession.objects.aget(session_uuid=self.room_name)
-            await ChatUser.objects.aget(user=self.scope["user"], chat_session=self.chat_session)
+            rprint(f"connecting {self.scope['user']} with {self.chat_session}")
+            user = self.scope["user"]
+            await ChatUser.objects.aget(user__id=user.id, chat_session=self.chat_session)
         except (ChatUser.DoesNotExist, ChatSession.DoesNotExist):
+            rprint("Chat session or user does not exist")
             await self.close()
             return
 
@@ -151,7 +159,7 @@ class LiveChatConsumer(AsyncWebsocketConsumer):
         if text_data:
             text_data_json = json.loads(text_data)
             message = text_data_json["message"]
-            await ChatMessage.objects.acreate(chat_session=self.chat_session,user=owner,message=message)
+            await ChatMessage.objects.acreate(chat_session=self.chat_session, user=owner, message=message)
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
@@ -164,15 +172,15 @@ class LiveChatConsumer(AsyncWebsocketConsumer):
                     )
                 }
             )
-            async for chat_user in ChatUser.objects.filter(chat_session=self.chat_session).exclude(user=owner):
-                usr = await sync_to_async(getattr)(chat_user, "user")
-                payload = {
-                    'head': "New message {}".format(str(self.chat_session.session_uuid)),
-                    'body': "{}: {}".format(owner.username, message)
-                }
-                if usr != owner:
-                    await sync_to_async(send_user_notification)(user=usr, payload=payload)
-                
+            # send notification to other users
+            # async for chat_user in ChatUser.objects.filter(chat_session=self.chat_session).exclude(user=owner):
+            #     usr = await sync_to_async(getattr)(chat_user, "user")
+            #     payload = {
+            #         'head': "New message {}".format(str(self.chat_session.session_uuid)),
+            #         'body': "{}: {}".format(owner.username, message)
+            #     }
+            #     if usr != owner:
+            #         await sync_to_async(send_user_notification)(user=usr, payload=payload)
 
     async def chat_message(self, event):
         await self.send(text_data=event["text"])
