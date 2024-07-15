@@ -20,6 +20,9 @@ class JoinChatroomMutation(graphene.Mutation):
             return JoinChatroomMutation(chatroom_id=new_chatsession.session_uuid)
         try:
             chatsession = ChatSession.objects.get(session_uuid=chatroom_id)
+            if ChatUser.objects.filter(chat_session=chatsession).count() >= 2:
+                raise GraphQLError("room is full")
+
             ChatUser.objects.get_or_create(chat_session=chatsession, user=user)
             return JoinChatroomMutation(chatroom_id=str(chatsession.session_uuid))
         # register for notification?
