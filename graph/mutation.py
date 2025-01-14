@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model, authenticate, login
 from webpush import send_user_notification, send_notification_to_group, send_group_notification
 from webpush.forms import WebPushForm, SubscriptionForm
 from .chatroom.mutation import Mutation as ChatroomMutation
+from .webrtc.mutation import Mutation as WebRTCMutation
 
 
 class SendNotificationMutation(graphene.Mutation):
@@ -74,7 +75,7 @@ class SubscribeMutation(graphene.Mutation):
         return SubscribeMutation(status=400)
 
 
-class Mutation(ChatroomMutation, graphene.ObjectType):
+class Mutation(WebRTCMutation, ChatroomMutation, graphene.ObjectType):
     send_notification = SendNotificationMutation.Field()
     subscribe_push = SubscribeMutation.Field()
     token_auth = graphql_jwt.ObtainJSONWebToken.Field()
