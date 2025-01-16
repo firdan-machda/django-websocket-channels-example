@@ -34,15 +34,26 @@ class WebRTCSignallingChannel(AsyncWebsocketConsumer):
                 "type": "user.message", "text": json.dumps({"type": "user-join", "owner": self.scope["user"].username})
             }
         )
+        if (await sync_to_async(_find_count)(self.chat_session)) >= 2:
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    "type": "chat.handshake",
+                    "text": json.dumps({
+                        "type": "init-handshake",
+                    })
+                }
+            )
 
     async def receive(self, text_data=None):
         text_data_json = json.loads(text_data)
         print(text_data_json)
         if text_data_json["type"] == "offer":
+            data = text_data_json.get("data", {"type": "offer"})
             await self.channel_layer.group_send(
                 self.room_group_name, {
                     "type": "user.message",
-                    "text": json.dumps({"type": "user-offer", "owner": self.scope["user"].username, "data": text_data_json["data"]})
+                    "text": json.dumps({"type": "user-offer", "owner": self.scope["user"].username, "data": data})
                 }
             )
         elif text_data_json["type"] == "candidate":
@@ -60,3 +71,24 @@ class WebRTCSignallingChannel(AsyncWebsocketConsumer):
         owner = json.loads(event["text"])["owner"]
         if user.username != owner:
             await self.send(text_data=event["text"])
+
+    async def chat_handshake(self, event):
+        await self.send(text_data=event["text"])
+
+    async def disconnect(self, close_code):
+        print(self.scope["user"], "disconnecting")
+        def _delete_chat_user(chat_session, user):
+            deleted = WebRTCUser.objects.filter(
+                webrtc_session=chat_session, user=user).delete()
+            print("Deleted ", deleted) 
+        
+        await sync_to_async(_delete_chat_user)(
+            self.chat_session, user=self.scope["user"])
+        await self.channel_layer.group_send(
+            self.room_group_name, {
+                "type": "user.message",
+                "text": json.dumps({"type": "user-disconnect", "owner": self.scope["user"].username})
+            }
+        )
+        # Leave room group
+        await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
