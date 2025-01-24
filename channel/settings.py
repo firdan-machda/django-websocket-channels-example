@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'channels',
     'compressor',  # for combining and minifying js and css files
     'chat',
+    'webrtc',
     'webpush'
 ]
 
