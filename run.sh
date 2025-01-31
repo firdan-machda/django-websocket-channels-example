@@ -33,6 +33,8 @@ install_requirements(){
 }
 
 migrate_database(){
+    # pull the latest changes
+    git pull
     # migrate the database
     python manage.py migrate
 }
@@ -72,7 +74,7 @@ if [ $OPTIND -eq 1 ]; then
     echo "Usage: $0 [-c] [-i] [-m] [-r]"
     echo "  -c  Create virtual environment"
     echo "  -i  Install requirements"
-    echo "  -m  Migrate database"
+    echo "  -m  Pull and Migrate database"
     echo "  -r  Run Django server"
     exit 1
 fi
