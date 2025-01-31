@@ -177,10 +177,8 @@ class LiveChatConsumer(AsyncWebsocketConsumer):
             if usr != owner:
                 await sync_to_async(send_user_notification)(
                     user=usr, payload=payload)
-    # Receive message from WebSocket
-    async def receive(self, text_data):
-        text_data_json = json.loads(text_data)
 
+    # Receive message from WebSocket
     async def receive(self, text_data):
         message = ""
         owner = self.scope["user"]

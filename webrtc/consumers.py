@@ -77,11 +77,12 @@ class WebRTCSignallingChannel(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code):
         print(self.scope["user"], "disconnecting")
+
         def _delete_chat_user(chat_session, user):
             deleted = WebRTCUser.objects.filter(
                 webrtc_session=chat_session, user=user).delete()
-            print("Deleted ", deleted) 
-        
+            print("Deleted ", deleted)
+
         await sync_to_async(_delete_chat_user)(
             self.chat_session, user=self.scope["user"])
         await self.channel_layer.group_send(
