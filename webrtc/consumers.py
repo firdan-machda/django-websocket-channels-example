@@ -1,9 +1,9 @@
 import json
 
+from django.db.models import Q
 from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from webrtc.models import WebRTCSession, WebRTCUser
-
 
 class WebRTCSignallingChannel(AsyncWebsocketConsumer):
     async def connect(self):
@@ -13,7 +13,7 @@ class WebRTCSignallingChannel(AsyncWebsocketConsumer):
         self.room_name = self.scope["url_route"]["kwargs"]["room_name"]
         self.room_group_name = "webrtc_%s" % self.room_name
         try:
-            self.chat_session = await WebRTCSession.objects.aget(session_uuid=self.room_name)
+            self.chat_session = await WebRTCSession.objects.aget(Q(session_uuid=self.room_name)|Q(alias=self.room_name))
             # await ChatUser.objects.aget(user=self.scope["user"], chat_session=self.chat_session)
         except (WebRTCSession.DoesNotExist):
             await self.close()
@@ -45,7 +45,7 @@ class WebRTCSignallingChannel(AsyncWebsocketConsumer):
                 }
             )
 
-    async def receive(self, text_data=None):
+    async def receive(self, text_data=None, bytes_data=None):
         text_data_json = json.loads(text_data)
         print(text_data_json)
         if text_data_json["type"] == "offer":
@@ -77,6 +77,10 @@ class WebRTCSignallingChannel(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code):
         print(self.scope["user"], "disconnecting")
+        message = "disconnected"
+
+        if close_code == 400:
+            message = "room is full"
 
         def _delete_chat_user(chat_session, user):
             deleted = WebRTCUser.objects.filter(
@@ -85,10 +89,11 @@ class WebRTCSignallingChannel(AsyncWebsocketConsumer):
 
         await sync_to_async(_delete_chat_user)(
             self.chat_session, user=self.scope["user"])
+        
         await self.channel_layer.group_send(
             self.room_group_name, {
                 "type": "user.message",
-                "text": json.dumps({"type": "user-disconnect", "owner": self.scope["user"].username})
+                "text": json.dumps({"type": "user-disconnect", "owner": self.scope["user"].username, message: message})
             }
         )
         # Leave room group

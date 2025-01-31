@@ -23,5 +23,8 @@ source $DIR/venv/bin/activate
 # install the requirements
 pip install -r requirements.txt
 
+# migrate django database
+python manage.py migrate
+
 # run the Django server
 python manage.py runserver
