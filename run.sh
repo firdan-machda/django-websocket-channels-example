@@ -11,6 +11,11 @@ else
     exit 1
 fi
 
+activate_venv(){
+    # activate the environment, assume venv is the same directory as the script
+    source $DIR/venv/bin/activate
+}
+
 # check if venv exists
 create_venv(){
     if [ ! -d "$DIR/venv" ]; then
@@ -22,10 +27,6 @@ create_venv(){
     fi
 }
 
-activate_venv(){
-    # activate the environment, assume venv is the same directory as the script
-    source $DIR/venv/bin/activate
-}
 
 install_requirements(){
     # install the requirements

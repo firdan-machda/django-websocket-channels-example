@@ -48,7 +48,8 @@ INSTALLED_APPS = [
     'compressor',  # for combining and minifying js and css files
     'chat',
     'webrtc',
-    'webpush'
+    'webpush',
+    'signaling'
 ]
 
 MIDDLEWARE = [

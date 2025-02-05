@@ -7,6 +7,7 @@ from webpush import send_user_notification, send_notification_to_group, send_gro
 from webpush.forms import WebPushForm, SubscriptionForm
 from .chatroom.mutation import Mutation as ChatroomMutation
 from .webrtc.mutation import Mutation as WebRTCMutation
+from .signaling.mutation import Mutation as SignalingMutation
 
 
 class SendNotificationMutation(graphene.Mutation):
@@ -75,7 +76,7 @@ class SubscribeMutation(graphene.Mutation):
         return SubscribeMutation(status=400)
 
 
-class Mutation(WebRTCMutation, ChatroomMutation, graphene.ObjectType):
+class Mutation(WebRTCMutation, ChatroomMutation, SignalingMutation, graphene.ObjectType):
     send_notification = SendNotificationMutation.Field()
     subscribe_push = SubscribeMutation.Field()
     token_auth = graphql_jwt.ObtainJSONWebToken.Field()
