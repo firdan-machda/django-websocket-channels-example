@@ -14,9 +14,11 @@ class WebRTCSessionAdmin(admin.ModelAdmin):
 class WebRTCUserAdmin(admin.ModelAdmin):
     list_display = ('username', 'joined')
     search_fields = ('username',)
+    
 
 
 @admin.register(WebRTCOffer)
 class WebRTCOfferAdmin(admin.ModelAdmin):
     list_display = ('webrtc_session', 'user', 'created_at')
     search_fields = ('webrtc_session__alias', 'user__username')
+    list_filter =('type',)
