@@ -7,6 +7,18 @@ from .models import WebRTCSession, WebRTCUser
 
 
 class WebRTCSignallingChannel(AsyncWebsocketConsumer):
+    """ Signaling channel for webrtc / video function.
+    As for now this is only for 1-1 video call. 
+
+    TODO: function to handle offer arrived before the other user is connected
+    TODO: function to add security
+    TODO: function to handle group video call
+    TODO: function to handle group chat
+
+
+    Args:
+        AsyncWebsocketConsumer (_type_): _description_
+    """
     async def connect(self):
         def _find_count(chat_session):
             return WebRTCUser.objects.filter(webrtc_session=chat_session).count()
